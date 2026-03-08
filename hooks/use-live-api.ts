@@ -206,9 +206,12 @@ export function useLiveAPI({ systemInstruction, tools, onMessage, onClose, onErr
     }
   }, []);
 
-  const sendImage = useCallback((base64Data: string, mimeType: string = 'image/jpeg') => {
+  const sendText = useCallback((text: string) => {
     if (sessionRef.current && liveStateRef.current === 'connected') {
-      sessionRef.current.sendRealtimeInput({ media: { data: base64Data, mimeType } });
+      sessionRef.current.sendClientContent({
+        turns: [{ role: 'user', parts: [{ text }] }],
+        turnComplete: true,
+      });
     }
   }, []);
 
@@ -218,5 +221,5 @@ export function useLiveAPI({ systemInstruction, tools, onMessage, onClose, onErr
     }
   }, []);
 
-  return { liveState, connect, disconnect, sendImage, sendToolResponse };
+  return { liveState, connect, disconnect, sendText, sendToolResponse };
 }

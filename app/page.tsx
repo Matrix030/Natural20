@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLiveAPI } from '@/hooks/use-live-api';
 import { getGenAI } from '@/lib/genai';
-import { Camera, Mic, Play, Square, Dices, Loader2, Sparkles } from 'lucide-react';
+import { Mic, Play, Square, Dices, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Image from 'next/image';
 
@@ -20,10 +20,6 @@ export default function Home() {
   const [view, setView] = useState<'landing' | 'session' | 'recap'>('landing');
   const [mounted, setMounted] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(true);
-  const [cameraActive, setCameraActive] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  // Track the live camera stream in a ref so cleanup is reliable regardless of async timing.
-  const cameraStreamRef = useRef<MediaStream | null>(null);
 
   const [worldState, setWorldState] = useState<WorldState>(initialWorldState);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -52,31 +48,6 @@ export default function Home() {
     }
   };
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-      cameraStreamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setCameraActive(true);
-      }
-    } catch (err) {
-      console.error('Failed to access camera:', err);
-      setCameraActive(false);
-    }
-  };
-
-  const stopCamera = useCallback(() => {
-    cameraStreamRef.current?.getTracks().forEach(track => track.stop());
-    cameraStreamRef.current = null;
-    setCameraActive(false);
-  }, []);
-
-  useEffect(() => {
-    if (view === 'session' && mounted && hasApiKey) startCamera();
-    return () => stopCamera();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, mounted, hasApiKey]);
 
   const sendToolResponseRef = useRef<((responses: unknown[]) => void) | null>(null);
   const dmTurnBufferRef = useRef<string>('');
@@ -173,7 +144,7 @@ export default function Home() {
     }
   }, [generateSceneImage]);
 
-  const { liveState, connect, disconnect, sendImage, sendToolResponse } = useLiveAPI({
+  const { liveState, connect, disconnect, sendText, sendToolResponse } = useLiveAPI({
     systemInstruction: DM_SYSTEM_INSTRUCTION,
     tools: [{ functionDeclarations: questTools }],
     onMessage: handleMessage,
@@ -183,30 +154,22 @@ export default function Home() {
   sendToolResponseRef.current = sendToolResponse;
 
   const handleRollDice = () => {
-    if (!videoRef.current || liveState !== 'connected') return;
-    if (videoRef.current.videoWidth === 0) return; // camera not ready yet
-    const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(videoRef.current, 0, 0);
-    const base64Data = canvas.toDataURL('image/jpeg').split(',')[1];
-    setMessages(prev => [...prev, { role: 'Player', text: '[Rolled Dice on Camera]', timestamp: Date.now() }]);
-    sendImage(base64Data, 'image/jpeg');
+    if (liveState !== 'connected') return;
+    const roll = Math.floor(Math.random() * 20) + 1;
+    const label = roll === 20 ? '20 — Natural 20! Critical success!' : roll === 1 ? '1 — Critical fail!' : String(roll);
+    setMessages(prev => [...prev, { role: 'Player', text: `[Rolled d20: ${label}]`, timestamp: Date.now() }]);
+    sendText(`I rolled a ${roll} on my d20.`);
   };
 
   const handleStartSession = () => setView('session');
 
   const handleEndSession = () => {
     disconnect();
-    stopCamera();
     setView('recap');
   };
 
   const handleRestart = () => {
     disconnect();
-    stopCamera();
     sceneImageCountRef.current = 0;
     setWorldState(initialWorldState);
     setMessages([]);
@@ -342,7 +305,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 w-full max-w-sm relative z-10">
+            <div className="relative z-10">
               <button
                 onClick={handleRollDice}
                 disabled={liveState !== 'connected'}
@@ -351,43 +314,12 @@ export default function Home() {
                 <Dices className="w-6 h-6 text-gold-500 group-hover:rotate-12 transition-transform" />
                 <span className="text-[9px] font-cinzel uppercase tracking-widest">Roll d20</span>
               </button>
-              <div className="flex flex-col items-center gap-2 p-4 border border-stone-800/50 bg-stone-950/50 text-stone-600 opacity-40 cursor-not-allowed">
-                <Camera className="w-6 h-6" />
-                <span className="text-[9px] font-cinzel uppercase tracking-widest">Dice Cam</span>
-              </div>
             </div>
           </div>
         </div>
 
         <div className="lg:col-span-3 flex flex-col gap-5 h-[calc(100vh-8rem)]">
           <Transcript messages={messages} />
-
-          <div className="dnd-panel overflow-hidden aspect-video relative shrink-0">
-            {!cameraActive && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-stone-950/80 text-stone-600 gap-2">
-                <Camera className="w-5 h-5 text-gold-700/30" />
-                <span className="text-[9px] font-cinzel uppercase tracking-widest text-stone-600/50">
-                  Camera Offline
-                </span>
-              </div>
-            )}
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover grayscale opacity-50"
-            />
-            <div className="absolute top-2 left-2 z-10">
-              <div className="px-2 py-1 bg-stone-950/70 border border-gold-700/25 text-[8px] font-cinzel uppercase tracking-widest text-gold-600/60">
-                Live Feed
-              </div>
-            </div>
-            <div className="absolute top-1 left-1 w-3 h-3 border-l border-t border-gold-600/30 pointer-events-none" />
-            <div className="absolute top-1 right-1 w-3 h-3 border-r border-t border-gold-600/30 pointer-events-none" />
-            <div className="absolute bottom-1 left-1 w-3 h-3 border-l border-b border-gold-600/30 pointer-events-none" />
-            <div className="absolute bottom-1 right-1 w-3 h-3 border-r border-b border-gold-600/30 pointer-events-none" />
-          </div>
         </div>
       </main>
     </div>
