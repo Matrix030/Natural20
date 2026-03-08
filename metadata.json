@@ -2,7 +2,6 @@
   "name": "DungeonFlow Live",
   "description": "A live voice-first AI Dungeon Master experience powered by Google Gemini.",
   "requestFramePermissions": [
-    "camera",
     "microphone"
   ]
 }
