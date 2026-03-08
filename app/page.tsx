@@ -69,29 +69,45 @@ export default function Home() {
   }, [view, mounted, hasApiKey]);
 
   const sendToolResponseRef = useRef<((responses: any[]) => void) | null>(null);
+  const dmTurnBufferRef = useRef<string>('');
 
   const generateSceneImage = useCallback(async (description: string, tone: string) => {
     if (sceneImages.length >= 3) return;
     setIsGeneratingScene(true);
     setCurrentSceneDesc(description);
-    try {
-      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-      if (!apiKey) throw new Error('Missing API Key');
-      const ai = new GoogleGenAI({ apiKey });
-      const prompt = `A highly detailed, cinematic fantasy illustration. ${description}. Tone: ${tone}. Masterpiece, trending on artstation, 8k.`;
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-image-preview',
-        contents: { parts: [{ text: prompt }] },
-        config: { imageConfig: { aspectRatio: '16:9', imageSize: '1K' } }
-      });
-      for (const part of response.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData) {
-          setSceneImages(prev => [...prev, `data:image/png;base64,${part.inlineData!.data}`]);
-          break;
+
+    const attemptGenerate = async (retryCount = 0): Promise<void> => {
+      try {
+        const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+        if (!apiKey) throw new Error('Missing API Key');
+        const ai = new GoogleGenAI({ apiKey });
+        const prompt = `A highly detailed, cinematic fantasy illustration. ${description}. Tone: ${tone}. Masterpiece, trending on artstation, 8k.`;
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.1-flash-image-preview',
+          contents: { parts: [{ text: prompt }] },
+          config: { imageConfig: { aspectRatio: '16:9', imageSize: '1K' } }
+        });
+        for (const part of response.candidates?.[0]?.content?.parts || []) {
+          if (part.inlineData) {
+            setSceneImages(prev => [...prev, `data:image/png;base64,${part.inlineData!.data}`]);
+            break;
+          }
         }
+      } catch (error: any) {
+        const status = error?.status ?? error?.error?.code;
+        if (status === 429 && retryCount < 2) {
+          // Parse suggested retry delay from error, default to 35s
+          const retryAfterMatch = JSON.stringify(error).match(/"retryDelay"\s*:\s*"(\d+)s"/);
+          const delayMs = retryAfterMatch ? parseInt(retryAfterMatch[1]) * 1000 : 35000;
+          await new Promise(res => setTimeout(res, delayMs));
+          return attemptGenerate(retryCount + 1);
+        }
+        console.error('Failed to generate scene image:', error);
       }
-    } catch (error) {
-      console.error('Failed to generate scene image:', error);
+    };
+
+    try {
+      await attemptGenerate();
     } finally {
       setIsGeneratingScene(false);
     }
@@ -99,8 +115,11 @@ export default function Home() {
 
   const handleMessage = useCallback(async (message: any) => {
     if (message.serverContent?.outputTranscription?.text) {
-      const text = message.serverContent.outputTranscription.text;
-      setMessages(prev => [...prev, { role: 'DM', text, timestamp: Date.now() }]);
+      dmTurnBufferRef.current += message.serverContent.outputTranscription.text;
+    }
+    if (message.serverContent?.turnComplete && dmTurnBufferRef.current.trim()) {
+      setMessages(prev => [...prev, { role: 'DM', text: dmTurnBufferRef.current.trim(), timestamp: Date.now() }]);
+      dmTurnBufferRef.current = '';
     }
     if (message.toolCall) {
       const functionCalls = message.toolCall.functionCalls;
