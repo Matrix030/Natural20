@@ -1,3 +1,9 @@
+# TEAM MEMBERS
+Rishikesh Gharat
+Arya Adesh
+Ruchita Sonawale
+Ambica Bhatia
+
 # DungeonFlow Live
 
 A voice-first AI Dungeon Master web app powered by Google Gemini 2.5 Flash Native Audio. Speak your actions out loud and your DM responds in real-time with voice narration, dynamic world state tracking, and AI-generated scene illustrations.
