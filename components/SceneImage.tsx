@@ -2,14 +2,13 @@ import React from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import { Loader2, Image as ImageIcon } from 'lucide-react';
+import { MAX_IMAGES_PER_LOCATION, ROMAN_NUMERALS } from '@/lib/constants';
 
 interface SceneImageProps {
   images: string[];
   isGenerating: boolean;
   description?: string;
 }
-
-const ROMAN = ['I', 'II', 'III'];
 
 export const SceneImage: React.FC<SceneImageProps> = ({ images, isGenerating, description }) => {
   const mainImage = images[images.length - 1];
@@ -84,7 +83,7 @@ export const SceneImage: React.FC<SceneImageProps> = ({ images, isGenerating, de
                   >
                     <Image
                       src={img}
-                      alt={`Scene ${ROMAN[idx]}`}
+                      alt={`Scene ${ROMAN_NUMERALS[idx]}`}
                       width={64}
                       height={36}
                       className="object-cover opacity-60 hover:opacity-100 transition-opacity"
@@ -100,7 +99,7 @@ export const SceneImage: React.FC<SceneImageProps> = ({ images, isGenerating, de
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-[9px] font-cinzel text-gold-500 uppercase tracking-[0.25em]">
-                    Scene {ROMAN[(images.length - 1) % 3]} of {images.length}/3
+                    Scene {ROMAN_NUMERALS[(images.length - 1) % MAX_IMAGES_PER_LOCATION]} of {MAX_IMAGES_PER_LOCATION}
                   </span>
                 </div>
                 <p className="text-xs text-parchment-400 italic font-serif max-w-[80%] drop-shadow-lg">

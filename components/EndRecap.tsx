@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Trophy, Book, MessageSquare, Target, ArrowRight, RotateCcw } from 'lucide-react';
-import { WorldState } from '@/lib/quest-engine';
+import { WorldState } from '@/lib/types';
 
 interface EndRecapProps {
   state: WorldState;

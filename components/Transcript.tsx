@@ -1,12 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Scroll } from 'lucide-react';
-
-export interface Message {
-  role: 'DM' | 'Player' | 'System';
-  text: string;
-  timestamp: number;
-}
+import { Message } from '@/lib/types';
 
 interface TranscriptProps {
   messages: Message[];

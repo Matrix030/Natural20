@@ -1,8 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { LiveServerMessage, Modality, Tool } from '@google/genai';
 import { getGenAI } from '@/lib/genai';
+import { MODELS, AUDIO } from '@/lib/constants';
 
-export type LiveState = 'disconnected' | 'connecting' | 'connected';
+import type { LiveState } from '@/lib/types';
+export type { LiveState } from '@/lib/types';
 
 export interface UseLiveAPIOptions {
   systemInstruction: string;
@@ -35,7 +37,6 @@ export function useLiveAPI({ systemInstruction, tools, onMessage, onClose, onErr
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sessionRef = useRef<any>(null);
   const liveStateRef = useRef<LiveState>('disconnected');
 
@@ -57,20 +58,20 @@ export function useLiveAPI({ systemInstruction, tools, onMessage, onClose, onErr
       const ai = getGenAI();
 
       // 16kHz input context for mic capture.
-      inputAudioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)({ sampleRate: 16000 });
+      inputAudioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)({ sampleRate: AUDIO.SAMPLE_RATE_INPUT });
       await inputAudioContextRef.current.resume();
 
       // Native-rate output context for high-quality 24kHz playback.
       outputAudioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       await outputAudioContextRef.current.resume();
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: AUDIO.SAMPLE_RATE_INPUT } });
       audioStreamRef.current = stream;
 
       const source = inputAudioContextRef.current.createMediaStreamSource(stream);
       // ScriptProcessorNode is deprecated but AudioWorklet requires a separate file;
       // functional for current targets.
-      const processor = inputAudioContextRef.current.createScriptProcessor(4096, 1, 1);
+      const processor = inputAudioContextRef.current.createScriptProcessor(AUDIO.PROCESSOR_BUFFER_SIZE, 1, 1);
       processorRef.current = processor;
       // Route mic → processor → silent gain (not speakers).
       // ScriptProcessorNode must be connected to something to fire onaudioprocess,
@@ -83,7 +84,7 @@ export function useLiveAPI({ systemInstruction, tools, onMessage, onClose, onErr
       silentGain.connect(inputAudioContextRef.current.destination);
 
       const session = await ai.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+        model: MODELS.VOICE_DM,
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
@@ -138,10 +139,10 @@ export function useLiveAPI({ systemInstruction, tools, onMessage, onClose, onErr
 
               // Schedule playback. Use <= to handle exact-boundary timing.
               if (nextPlayTimeRef.current <= audioCtx.currentTime) {
-                nextPlayTimeRef.current = audioCtx.currentTime + 0.05;
+                nextPlayTimeRef.current = audioCtx.currentTime + AUDIO.PLAYBACK_LEAD_SECONDS;
               }
 
-              const audioBuffer = audioCtx.createBuffer(1, float32Array.length, 24000);
+              const audioBuffer = audioCtx.createBuffer(1, float32Array.length, AUDIO.SAMPLE_RATE_OUTPUT);
               audioBuffer.getChannelData(0).set(float32Array);
 
               const bufferSource = audioCtx.createBufferSource();
@@ -179,7 +180,6 @@ export function useLiveAPI({ systemInstruction, tools, onMessage, onClose, onErr
       onErrorRef.current?.(err);
     }
   // systemInstruction and tools are stable config; callbacks are handled via refs.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [systemInstruction, tools]);
 
   const disconnect = useCallback(() => {

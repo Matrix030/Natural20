@@ -1,6 +1,6 @@
 import React from 'react';
 import { MapPin, Target, Search, Users, AlertTriangle, User } from 'lucide-react';
-import { WorldState } from '@/lib/quest-engine';
+import { WorldState } from '@/lib/types';
 import { motion } from 'motion/react';
 
 interface StatePanelProps {
