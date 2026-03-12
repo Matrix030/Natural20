@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLiveAPI } from '@/hooks/use-live-api';
 import { useImageGeneration } from '@/hooks/use-image-generation';
 import { initialWorldState, questTools, DM_SYSTEM_INSTRUCTION } from '@/lib/engine';
-import { WorldState, Message, AIStudioWindow } from '@/lib/types';
+import { WorldState, Item, Message, AIStudioWindow } from '@/lib/types';
 import { LandingPage } from '@/components/LandingPage';
 import { EndRecap } from '@/components/EndRecap';
 import { SessionView } from '@/components/SessionView';
@@ -84,6 +84,21 @@ export default function Home() {
       if (call.name === 'trigger_visual_scene') {
         generateSceneImage(call.args.description as string, call.args.tone as string);
         return [{ id: call.id, name: call.name, response: { result: 'Visual scene triggered.' } }];
+      }
+      if (call.name === 'modify_player_hp') {
+        setWorldState(prev => ({
+          ...prev,
+          hp: Math.max(0, Math.min(prev.maxHp, prev.hp + (call.args.amount as number))),
+        }));
+        return [{ id: call.id, name: call.name, response: { result: 'HP updated.' } }];
+      }
+      if (call.name === 'add_to_inventory') {
+        setWorldState(prev => ({ ...prev, inventory: [...prev.inventory, call.args as unknown as Item] }));
+        return [{ id: call.id, name: call.name, response: { result: 'Item added to inventory.' } }];
+      }
+      if (call.name === 'apply_status_effect') {
+        setWorldState(prev => ({ ...prev, statusEffects: [...prev.statusEffects, call.args.effect as string] }));
+        return [{ id: call.id, name: call.name, response: { result: 'Status effect applied.' } }];
       }
       return [];
     });

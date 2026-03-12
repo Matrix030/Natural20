@@ -11,4 +11,8 @@ export const initialWorldState: WorldState = {
     { name: 'Father Orin', status: 'In Chapel', relationship: 'Neutral' },
   ],
   hazards: [],
+  hp: 20,
+  maxHp: 20,
+  inventory: [],
+  statusEffects: [],
 };

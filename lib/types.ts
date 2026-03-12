@@ -8,6 +8,13 @@ export interface NPC {
   relationship: string;
 }
 
+export interface Item {
+  name: string;
+  description: string;
+  effect: 'heal' | 'damage_boost' | 'status_cure' | 'clue';
+  magnitude: number;
+}
+
 export interface WorldState {
   playerName: string;
   playerRole: string;
@@ -17,6 +24,10 @@ export interface WorldState {
   npcs: NPC[];
   hazards: string[];
   lastCheckResult?: string;
+  hp: number;
+  maxHp: number;
+  inventory: Item[];
+  statusEffects: string[];
 }
 
 export interface Message {
