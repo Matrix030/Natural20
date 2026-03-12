@@ -1,16 +1,31 @@
 import React from 'react';
-import { MapPin, Target, Search, Users, AlertTriangle, User } from 'lucide-react';
-import { WorldState } from '@/lib/types';
+import { MapPin, Target, Search, Users, AlertTriangle, User, Heart, Sword, Shield, Backpack } from 'lucide-react';
+import { WorldState, Item } from '@/lib/types';
 import { motion } from 'motion/react';
 
 interface StatePanelProps {
   state: WorldState;
 }
 
+const EFFECT_ICONS: Record<Item['effect'], React.ElementType> = {
+  heal: Heart,
+  damage_boost: Sword,
+  status_cure: Shield,
+  clue: Search,
+};
+
+function hpBarColor(percent: number): string {
+  if (percent > 50) return 'bg-gold-400';
+  if (percent >= 25) return 'bg-gold-700';
+  return 'bg-blood-500';
+}
+
 export const StatePanel: React.FC<StatePanelProps> = ({ state }) => {
+  const hpPercent = state.maxHp > 0 ? (state.hp / state.maxHp) * 100 : 0;
+
   return (
     <div className="flex flex-col gap-3 h-full">
-      {/* Player Info */}
+      {/* Player Info + HP */}
       <div className="dnd-panel">
         <div className="dnd-panel-header flex items-center gap-2 px-4 py-2.5">
           <User className="w-3.5 h-3.5 text-gold-500" />
@@ -25,6 +40,36 @@ export const StatePanel: React.FC<StatePanelProps> = ({ state }) => {
             <span className="text-[9px] font-cinzel text-gold-600 uppercase tracking-widest block mb-1">Class</span>
             <span className="text-sm font-serif text-parchment-200">{state.playerRole}</span>
           </div>
+        </div>
+
+        {/* HP Bar */}
+        <div className="px-4 pb-4">
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="text-[9px] font-cinzel text-gold-600 uppercase tracking-widest">Vitality</span>
+            <span className="text-xs font-serif text-parchment-300" aria-label="hp-text">
+              {state.hp} / {state.maxHp}
+            </span>
+          </div>
+          <div className="dnd-panel-inset h-3 overflow-hidden" aria-label="hp-bar-track">
+            <div
+              className={`h-full transition-all duration-500 ${hpBarColor(hpPercent)}`}
+              style={{ width: `${hpPercent}%` }}
+              data-testid="hp-bar-fill"
+            />
+          </div>
+          {state.statusEffects.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2" aria-label="status-effects">
+              {state.statusEffects.map((effect, i) => (
+                <span
+                  key={i}
+                  className="px-1.5 py-0.5 bg-blood-900/60 border border-blood-700/40 text-[9px] text-blood-300 font-cinzel tracking-wide"
+                  data-testid="status-badge"
+                >
+                  {effect}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -127,6 +172,41 @@ export const StatePanel: React.FC<StatePanelProps> = ({ state }) => {
               </div>
             </>
           )}
+        </div>
+      </div>
+
+      {/* Inventory */}
+      <div className="dnd-panel">
+        <div className="dnd-panel-header flex items-center gap-2 px-4 py-2.5">
+          <Backpack className="w-3.5 h-3.5 text-gold-500" />
+          <span className="text-[10px] font-cinzel text-gold-400 uppercase tracking-[0.25em]">Inventory</span>
+        </div>
+        <div className="p-4 grid grid-cols-3 gap-2">
+          {Array.from({ length: 6 }).map((_, i) => {
+            const item = state.inventory[i];
+            const Icon = item ? EFFECT_ICONS[item.effect] : null;
+            return (
+              <div
+                key={i}
+                className={`dnd-panel-inset p-2 min-h-[52px] flex flex-col items-center justify-center gap-1 ${item ? '' : 'opacity-30'}`}
+                title={item?.description}
+                data-testid="inventory-slot"
+              >
+                {item ? (
+                  <>
+                    <span data-testid={`icon-${item.effect}`}>
+                      {Icon && <Icon className="w-3.5 h-3.5 text-gold-500" />}
+                    </span>
+                    <span className="text-[9px] font-cinzel text-parchment-300 text-center leading-tight">
+                      {item.name}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-[10px] text-stone-600">—</span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

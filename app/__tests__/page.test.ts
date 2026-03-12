@@ -1,21 +1,4 @@
-// Mock all non-pure imports so page.tsx is loadable in Node without a browser.
-jest.mock('@/hooks/use-live-api', () => ({ useLiveAPI: jest.fn() }));
-jest.mock('@/hooks/use-image-generation', () => ({ useImageGeneration: jest.fn() }));
-jest.mock('@/components/LandingPage', () => ({ LandingPage: () => null }));
-jest.mock('@/components/EndRecap', () => ({ EndRecap: () => null }));
-jest.mock('@/components/SessionView', () => ({ SessionView: () => null }));
-jest.mock('@/components/ApiKeyGate', () => ({ ApiKeyGate: () => null }));
-jest.mock('@/lib/engine', () => ({
-  initialWorldState: {
-    playerName: '', playerRole: '', currentLocation: '', currentObjective: '',
-    knownClues: [], npcs: [], hazards: [],
-    hp: 20, maxHp: 20, inventory: [], statusEffects: [],
-  },
-  questTools: [],
-  DM_SYSTEM_INSTRUCTION: '',
-}));
-
-import { applyHpChange, applyInventoryAdd, applyStatusEffect } from '@/app/page';
+import { applyHpChange, applyInventoryAdd, applyStatusEffect } from '@/lib/engine';
 import type { WorldState, Item } from '@/lib/types';
 
 // ---------------------------------------------------------------------------
