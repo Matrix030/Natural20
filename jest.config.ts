@@ -6,6 +6,9 @@ const config: Config = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: { jsx: 'react-jsx' } }],
+  },
 };
 
 export default config;

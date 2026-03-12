@@ -4,14 +4,38 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLiveAPI } from '@/hooks/use-live-api';
 import { useImageGeneration } from '@/hooks/use-image-generation';
 import { initialWorldState, questTools, DM_SYSTEM_INSTRUCTION } from '@/lib/engine';
-import { WorldState, Item, Message, AIStudioWindow } from '@/lib/types';
+import { AppView, WorldState, Item, Message, AIStudioWindow } from '@/lib/types';
 import { LandingPage } from '@/components/LandingPage';
 import { EndRecap } from '@/components/EndRecap';
 import { SessionView } from '@/components/SessionView';
 import { ApiKeyGate } from '@/components/ApiKeyGate';
 
+// ---------------------------------------------------------------------------
+// Pure state helpers — exported for unit testing
+// ---------------------------------------------------------------------------
+
+export function applyHpChange(
+  prev: WorldState,
+  amount: number,
+): { state: WorldState; died: boolean } {
+  const hp = Math.max(0, Math.min(prev.maxHp, prev.hp + amount));
+  return { state: { ...prev, hp }, died: hp === 0 };
+}
+
+export function applyInventoryAdd(prev: WorldState, item: Item): WorldState {
+  if (prev.inventory.length >= 6) return prev;
+  return { ...prev, inventory: [...prev.inventory, item] };
+}
+
+export function applyStatusEffect(prev: WorldState, effect: string): WorldState {
+  if (prev.statusEffects.includes(effect)) return prev;
+  return { ...prev, statusEffects: [...prev.statusEffects, effect] };
+}
+
+// ---------------------------------------------------------------------------
+
 export default function Home() {
-  const [view, setView] = useState<'landing' | 'session' | 'recap'>('landing');
+  const [view, setView] = useState<AppView>('landing');
   const [mounted, setMounted] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(true);
   const [worldState, setWorldState] = useState<WorldState>(initialWorldState);
@@ -86,18 +110,19 @@ export default function Home() {
         return [{ id: call.id, name: call.name, response: { result: 'Visual scene triggered.' } }];
       }
       if (call.name === 'modify_player_hp') {
-        setWorldState(prev => ({
-          ...prev,
-          hp: Math.max(0, Math.min(prev.maxHp, prev.hp + (call.args.amount as number))),
-        }));
+        setWorldState(prev => {
+          const { state, died } = applyHpChange(prev, call.args.amount as number);
+          if (died) setView('death');
+          return state;
+        });
         return [{ id: call.id, name: call.name, response: { result: 'HP updated.' } }];
       }
       if (call.name === 'add_to_inventory') {
-        setWorldState(prev => ({ ...prev, inventory: [...prev.inventory, call.args as unknown as Item] }));
+        setWorldState(prev => applyInventoryAdd(prev, call.args as unknown as Item));
         return [{ id: call.id, name: call.name, response: { result: 'Item added to inventory.' } }];
       }
       if (call.name === 'apply_status_effect') {
-        setWorldState(prev => ({ ...prev, statusEffects: [...prev.statusEffects, call.args.effect as string] }));
+        setWorldState(prev => applyStatusEffect(prev, call.args.effect as string));
         return [{ id: call.id, name: call.name, response: { result: 'Status effect applied.' } }];
       }
       return [];
@@ -137,6 +162,7 @@ export default function Home() {
   if (!hasApiKey) return <ApiKeyGate onSelectKey={handleSelectKey} />;
   if (view === 'landing') return <LandingPage onStart={() => setView('session')} />;
   if (view === 'recap') return <EndRecap state={worldState} onRestart={handleRestart} />;
+  if (view === 'death') return <div>death screen placeholder</div>;
 
   return (
     <SessionView

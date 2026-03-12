@@ -1,4 +1,4 @@
-export type AppView = 'landing' | 'session' | 'recap';
+export type AppView = 'landing' | 'session' | 'recap' | 'death';
 
 export type LiveState = 'disconnected' | 'connecting' | 'connected';
 
