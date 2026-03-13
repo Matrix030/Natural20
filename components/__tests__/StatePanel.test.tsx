@@ -20,7 +20,7 @@ jest.mock('motion/react', () => ({
 // ---------------------------------------------------------------------------
 
 const baseState: WorldState = {
-  playerName: 'Aldric', playerRole: 'Paladin',
+  playerName: 'Aldric', playerRole: 'Paladin', trait: '',
   currentLocation: 'Black Hollow Square', currentObjective: 'Ring the bell',
   knownClues: [], npcs: [], hazards: [],
   hp: 20, maxHp: 20, inventory: [], statusEffects: [],

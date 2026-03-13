@@ -1,4 +1,4 @@
-export type AppView = 'landing' | 'session' | 'recap' | 'death';
+export type AppView = 'landing' | 'character-creation' | 'session' | 'recap' | 'death';
 
 export type LiveState = 'disconnected' | 'connecting' | 'connected';
 
@@ -28,6 +28,7 @@ export interface WorldState {
   maxHp: number;
   inventory: Item[];
   statusEffects: string[];
+  trait: string;
 }
 
 export interface Message {

@@ -15,4 +15,5 @@ export const initialWorldState: WorldState = {
   maxHp: 20,
   inventory: [],
   statusEffects: [],
+  trait: '',
 };

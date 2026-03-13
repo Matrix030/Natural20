@@ -6,7 +6,7 @@ import type { WorldState, Item } from '@/lib/types';
 // ---------------------------------------------------------------------------
 
 const baseState: WorldState = {
-  playerName: 'Hero', playerRole: 'Rogue',
+  playerName: 'Hero', playerRole: 'Rogue', trait: '',
   currentLocation: 'Square', currentObjective: 'Test',
   knownClues: [], npcs: [], hazards: [],
   hp: 10, maxHp: 20, inventory: [], statusEffects: [],

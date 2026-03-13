@@ -3,13 +3,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLiveAPI } from '@/hooks/use-live-api';
 import { useImageGeneration } from '@/hooks/use-image-generation';
-import { initialWorldState, questTools, DM_SYSTEM_INSTRUCTION, applyHpChange, applyInventoryAdd, applyStatusEffect } from '@/lib/engine';
+import { initialWorldState, questTools, DM_SYSTEM_INSTRUCTION, applyHpChange, applyInventoryAdd, applyStatusEffect, buildBootstrapMessage } from '@/lib/engine';
 import { AppView, WorldState, Item, Message, AIStudioWindow } from '@/lib/types';
 import { LandingPage } from '@/components/LandingPage';
 import { EndRecap } from '@/components/EndRecap';
 import { SessionView } from '@/components/SessionView';
 import { ApiKeyGate } from '@/components/ApiKeyGate';
 import { DeathScreen } from '@/components/DeathScreen';
+import { CharacterCreation, TRAIT_HP_BONUS } from '@/components/CharacterCreation';
 
 export default function Home() {
   const [view, setView] = useState<AppView>('landing');
@@ -17,6 +18,8 @@ export default function Home() {
   const [hasApiKey, setHasApiKey] = useState(true);
   const [worldState, setWorldState] = useState<WorldState>(initialWorldState);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [characterCreated, setCharacterCreated] = useState(false);
+  const bootstrappedRef = useRef(false);
 
   const dmTurnBufferRef = useRef('');
   const sendToolResponseRef = useRef<((responses: unknown[]) => void) | null>(null);
@@ -122,6 +125,14 @@ export default function Home() {
   useEffect(() => { sendToolResponseRef.current = sendToolResponse; }, [sendToolResponse]);
   useEffect(() => { disconnectRef.current = disconnect; }, [disconnect]);
 
+  // Send a one-shot bootstrap message the first time the session connects (after character creation).
+  useEffect(() => {
+    if (liveState === 'connected' && !bootstrappedRef.current && characterCreated) {
+      bootstrappedRef.current = true;
+      sendText(buildBootstrapMessage(worldState));
+    }
+  }, [liveState, sendText, worldState, characterCreated]);
+
   const handleRollDice = () => {
     if (liveState !== 'connected') return;
     const roll = Math.floor(Math.random() * 20) + 1;
@@ -137,12 +148,31 @@ export default function Home() {
     resetImages();
     setWorldState(initialWorldState);
     setMessages([]);
+    setCharacterCreated(false);
+    bootstrappedRef.current = false;
     setView('landing');
   };
 
   if (!mounted) return null;
   if (!hasApiKey) return <ApiKeyGate onSelectKey={handleSelectKey} />;
-  if (view === 'landing') return <LandingPage onStart={() => setView('session')} />;
+  if (view === 'landing') return <LandingPage onStart={() => setView('character-creation')} />;
+  if (view === 'character-creation') return (
+    <CharacterCreation
+      onComplete={(name, role, trait) => {
+        const hpBonus = TRAIT_HP_BONUS[trait] ?? 0;
+        setWorldState({
+          ...initialWorldState,
+          playerName: name,
+          playerRole: role,
+          trait,
+          maxHp: initialWorldState.maxHp + hpBonus,
+          hp: initialWorldState.maxHp + hpBonus,
+        });
+        setCharacterCreated(true);
+        setView('session');
+      }}
+    />
+  );
   if (view === 'recap') return <EndRecap state={worldState} onRestart={handleRestart} />;
   if (view === 'death') return (
     <DeathScreen

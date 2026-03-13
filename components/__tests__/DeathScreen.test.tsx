@@ -38,7 +38,7 @@ const defaultProps = {
   playerName: 'Seraphel',
   playerRole: 'Cleric',
   finalLocation: 'Bell Warden Crypt',
-  inventory: [],
+  inventory: [] as Item[],
   onRestart: jest.fn(),
 };
 
